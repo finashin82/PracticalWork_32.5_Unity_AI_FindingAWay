@@ -6,47 +6,162 @@ using UnityEngine.AI;
 
 public class CharacterController : MonoBehaviour
 {   
-    private GameObject[] targets, visitorDel;
-   
-    [SerializeField] private NavMeshAgent visitor;
-    
-    int rand, visitorCount = 10;
-    
+    [SerializeField] private List<NavMeshAgent> _visitors;
+
+    [SerializeField] private List<NavMeshAgent> _securitys;
+
+    [SerializeField] private float _timeAtTheGoal = 5f;
+
+    [SerializeField] private float _timeForSecurity = 2f;
+
+    private GameObject[] targets;    
+
+    private int randTarget, numberVisitorAtTheTarget;
+
+    private bool isVisitorFree = false, isSecurityFree = true, isFree = true, isTimerOn = true;
+
+    private float currentTime, currentTimeForSecurity;
+
     void Start()
     {
-        targets = GameObject.FindGameObjectsWithTag("Target");
+        targets = GameObject.FindGameObjectsWithTag("Target");        
+
+        currentTime = _timeAtTheGoal;
+
+        currentTimeForSecurity = _timeForSecurity;
+
+        StartMovingTowardsTheGoal();        
     }
-    
-    public void MovingTowardsTheGoal()
+
+    private void Update()
     {
-        visitor.gameObject.SetActive(true);
-
-        if (GameObject.FindWithTag("VisitorsDel") != null)
+        for (int i = 0; i < _visitors.Count; i++)
         {
-            VisitorsDelete();
-        }        
+            if (_visitors[i].remainingDistance < _visitors[i].stoppingDistance + 1f && isTimerOn)
+            {
+                Timer(_timeAtTheGoal);
+            }
 
-        for (int i = 0; i < visitorCount; i++)
+            if (isFree)
+            {
+                MovingTowardsTheGoal(i);
+            }
+
+            isFree = false;
+
+            isTimerOn = true;            
+        }
+        
+        for (int i = 0; i < _securitys.Count; i++)
         {
-            rand = Random.Range(0, targets.Length);
-           
-            var pref = Instantiate(visitor);
+            if (_securitys[i].remainingDistance < _securitys[i].stoppingDistance + 1f)
+            {
+                TimerSecurity();
 
-            pref.tag = "VisitorsDel";
+                numberVisitorAtTheTarget = AchievingTheGoal();
 
-            pref.destination = targets[rand].transform.position;
+                if (numberVisitorAtTheTarget >= 0 && isSecurityFree)
+                {
+                    _securitys[i].destination = _visitors[numberVisitorAtTheTarget].transform.position;
+                }
+
+                isSecurityFree = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Проверка достижения цели у посетителя
+    /// </summary>
+    private int AchievingTheGoal()
+    {
+        for (int i = 0; i < _visitors.Count; i++)
+        {
+            if (_visitors[i].remainingDistance < _visitors[i].stoppingDistance + 1f)
+            {
+                return i;                
+            }
         }
 
-        visitor.gameObject.SetActive(false);
+        return -1;
     }
 
-    private void VisitorsDelete()
+    /// <summary>
+    /// Движение посетителей на старте
+    /// </summary>
+    public void StartMovingTowardsTheGoal()
     {
-        visitorDel = GameObject.FindGameObjectsWithTag("VisitorsDel");
-
-        for (int i = 0;i < visitorDel.Length;i++)
+        for (int i = 0; i < _visitors.Count; i++)
         {
-            Destroy(visitorDel[i]);
+            MovingTowardsTheGoal(i);
+        }
+    }
+
+    /// <summary>
+    /// Движение посетителей к случайной цели
+    /// </summary>
+    /// <param name="numberTarget"></param>
+    public void MovingTowardsTheGoal(int numberTarget)
+    {        
+        randTarget = Random.Range(0, targets.Length);
+
+        _visitors[numberTarget].destination = targets[randTarget].transform.position;
+       
+    }     
+    
+    /// <summary>
+    /// Движение охраны к случайным посетителям
+    /// </summary>
+    /// <param name="numberVisitor"></param>
+    public void SecurityMovement(int numberVisitor)
+    {        
+        _securitys[numberVisitor].destination = _visitors[numberVisitorAtTheTarget].transform.position;       
+    }    
+
+    /// <summary>
+    /// Таймер для отсчета времени, проведенной у цели
+    /// </summary>
+    private void TimerVisitor()
+    {
+        if (currentTime > 0)
+        {
+            currentTime -= Time.deltaTime;
+        }
+        else
+        {
+            isVisitorFree = true;            
+
+            currentTime = _timeAtTheGoal;
+        }
+    }
+    
+    private void TimerSecurity()
+    {
+        if (currentTimeForSecurity > 0)
+        {
+            currentTimeForSecurity -= Time.deltaTime;
+        }
+        else
+        {
+            isSecurityFree = true;            
+
+            currentTimeForSecurity = _timeForSecurity;
+        }
+    }
+    
+    private void Timer(float timer)
+    {
+        timer -= Time.deltaTime;
+
+        if (timer <= 0)
+        {
+            isFree = true;
+            
+        }
+        else
+        {
+            isFree = false;
+            isTimerOn = false;
         }
     }
 }
