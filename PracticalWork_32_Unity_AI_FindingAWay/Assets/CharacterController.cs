@@ -10,7 +10,7 @@ public class CharacterController : MonoBehaviour
 
     [SerializeField] private List<NavMeshAgent> _securitys;
 
-    [SerializeField] private float _timeAtTheGoal = 5f;
+    [SerializeField] private float _timeForVisitor = 5f;
 
     [SerializeField] private float _timeForSecurity = 2f;
 
@@ -18,15 +18,15 @@ public class CharacterController : MonoBehaviour
 
     private int randTarget, numberVisitorAtTheTarget;
 
-    private bool isVisitorFree = false, isSecurityFree = true, isFree = true, isTimerOn = true;
+    private bool isVisitorFree = false, isSecurityFree = true;
 
-    private float currentTime, currentTimeForSecurity;
+    private float currentTimeForVisitor, currentTimeForSecurity;
 
     void Start()
     {
         targets = GameObject.FindGameObjectsWithTag("Target");        
 
-        currentTime = _timeAtTheGoal;
+        currentTimeForVisitor = _timeForVisitor;
 
         currentTimeForSecurity = _timeForSecurity;
 
@@ -37,36 +37,35 @@ public class CharacterController : MonoBehaviour
     {
         for (int i = 0; i < _visitors.Count; i++)
         {
-            if (_visitors[i].remainingDistance < _visitors[i].stoppingDistance + 1f && isTimerOn)
+            if (_visitors[i].remainingDistance <= _visitors[i].stoppingDistance)
             {
-                Timer(_timeAtTheGoal);
+                TimerVisitor();
             }
 
-            if (isFree)
+            if (isVisitorFree)
             {
                 MovingTowardsTheGoal(i);
             }
 
-            isFree = false;
-
-            isTimerOn = true;            
+            isVisitorFree = false;     
         }
         
         for (int i = 0; i < _securitys.Count; i++)
         {
-            if (_securitys[i].remainingDistance < _securitys[i].stoppingDistance + 1f)
+            if (_securitys[i].remainingDistance <= _securitys[i].stoppingDistance)
             {
                 TimerSecurity();
-
-                numberVisitorAtTheTarget = AchievingTheGoal();
-
-                if (numberVisitorAtTheTarget >= 0 && isSecurityFree)
-                {
-                    _securitys[i].destination = _visitors[numberVisitorAtTheTarget].transform.position;
-                }
-
-                isSecurityFree = false;
             }
+
+            numberVisitorAtTheTarget = AchievingTheGoal();
+
+            if (numberVisitorAtTheTarget >= 0 && isSecurityFree)
+            {
+                _securitys[i].destination = _visitors[numberVisitorAtTheTarget].transform.position;
+            }
+
+            isSecurityFree = false;
+            
         }
     }
 
@@ -77,7 +76,7 @@ public class CharacterController : MonoBehaviour
     {
         for (int i = 0; i < _visitors.Count; i++)
         {
-            if (_visitors[i].remainingDistance < _visitors[i].stoppingDistance + 1f)
+            if (_visitors[i].remainingDistance <= _visitors[i].stoppingDistance)
             {
                 return i;                
             }
@@ -123,18 +122,21 @@ public class CharacterController : MonoBehaviour
     /// </summary>
     private void TimerVisitor()
     {
-        if (currentTime > 0)
+        if (currentTimeForVisitor > 0)
         {
-            currentTime -= Time.deltaTime;
+            currentTimeForVisitor -= Time.deltaTime;
         }
         else
         {
             isVisitorFree = true;            
 
-            currentTime = _timeAtTheGoal;
+            currentTimeForVisitor = _timeForVisitor;
         }
     }
     
+    /// <summary>
+    /// Таймер для отсчета времени у охраны
+    /// </summary>
     private void TimerSecurity()
     {
         if (currentTimeForSecurity > 0)
@@ -147,21 +149,5 @@ public class CharacterController : MonoBehaviour
 
             currentTimeForSecurity = _timeForSecurity;
         }
-    }
-    
-    private void Timer(float timer)
-    {
-        timer -= Time.deltaTime;
-
-        if (timer <= 0)
-        {
-            isFree = true;
-            
-        }
-        else
-        {
-            isFree = false;
-            isTimerOn = false;
-        }
-    }
+    }    
 }
